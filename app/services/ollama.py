@@ -11,17 +11,20 @@ class OllamaService:
         self.extractor_model = os.getenv("EXTRACTOR_MODEL", "qwen2.5:7b")
         self.embed_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
-    def chat(self, messages):
-        response = ollama.chat(model=self.chat_model, messages=messages)
+    def chat(self, messages, model=None):
+        target_model = model or self.chat_model
+        response = ollama.chat(model=target_model, messages=messages)
         return response['message']
 
-    def extractEntities(self,text):
-        # PROMPTING HERE -> we want the extractor model to pull very specific entities/ relationships
-        # we can use multi-shot prompting to get the model to pull the right things
-        #TODO - implement multi-shot prompting
-        prompt= f"Extract entities and relationships from this text as JSON: {text}"
-        response = ollama.generate(model=self.extractor_model, prompt=prompt, format='json')
-        return response['response']
+    # def extractEntities(self,text):
+    #     # PROMPTING HERE -> we want the extractor model to pull very specific entities/ relationships
+    #     # we can use multi-shot prompting to get the model to pull the right things
+    #     #TODO - implement multi-shot prompting
+    #     prompt= f"Extract entities and relationships from this text as JSON: {text}"
+    #     response = ollama.generate(model=self.extractor_model, prompt=prompt, format='json')
+    #     return response['response']
+
+    #ABOVE IMPLEMENTED IN EXTRACTOR.PY
 
     def embed(self,text):
         response= ollama.embeddings(model=self.embed_model, prompt=text)

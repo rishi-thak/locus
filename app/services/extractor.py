@@ -1,8 +1,9 @@
 from app.services.ollama import OllamaService
 import json
+import os
 
 class ExtractorService:
-    def init(self):
+    def __init__(self):
         self.ollama = OllamaService()
         self.systemPrompt="""
         You are a graph extraction assistant. Your goal is to extract nodes and edges from text.
@@ -10,7 +11,6 @@ class ExtractorService:
         Few-shot examples:
 
         Text: Rishi is a student at cal poly, majoring in CS
-        JSON:
         JSON: {
           "nodes": [
             {"id": "rishi", "label": "Person", "properties": {"name": "Rishi"}},
@@ -38,7 +38,7 @@ class ExtractorService:
 
     def extract(self, text):
         messages=[
-            {"role": "system", "content": self.system_prompt},
+            {"role": "system", "content": self.systemPrompt},
             {"role": "user", "content": f"Extract from this text: {text}"}
         ]
         response = self.ollama.chat(messages, model=os.getenv("EXTRACTOR_MODEL", "qwen2.5:7b"))
