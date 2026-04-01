@@ -34,6 +34,36 @@ class Neo4jService:
                     source=edge['source'], 
                     target=edge['target'], 
                     type=edge['type'])
+    
+    def getGraph(self):
+        with self.driver.session(database=self.database) as session:
+            query = "MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m"
+            result = session.run(query)
+
+            nodes = {}
+            links = []
+
+            for record in result:
+                nodeN = record['n']
+                nID= nodeN['id']
+                if nID not in nodes:
+                    nodes[nID]= {"id": nID, "label": nodeN['label'], "properties": dict(nodeN)}
+
+                if record['r']:
+                    nodeM = record['m']
+                    mID = nodeM['id']
+                    if mID not in nodes:
+                        nodes[mID] = {"id": mID, "label": nodeM['label'], "properties": dict(nodeM)}
+
+                    links.append({
+                        "source": nID,
+                        "target": mID,
+                        "type": record['r'].get('type', 'RELATED_TO')
+                    })
+            
+            return {"nodes": list(nodes.values()), "links": links}
+                    
+                    
                 
 if __name__ == "__main__":
     service = Neo4jService()

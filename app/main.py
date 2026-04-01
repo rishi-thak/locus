@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from app.services.ollama import OllamaService
 from app.services.extractor import ExtractorService
-from app.services.neo4j_service import Neo4jService
+from app.services.neo4jService import Neo4jService
 from app.db.sqlite import save_message
 import os
 from dotenv import load_dotenv
@@ -15,6 +15,7 @@ ollama_service = OllamaService()
 class ChatRequest(BaseModel):
     message:str
 
+#routes
 @app.post("/chat")
 async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     #save user message to db
@@ -31,6 +32,17 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/graph")
+async def getGraphEndpoint():
+    graphService=Neo4jService()
+    try:
+        return graphService.getGraph()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        graphService.close()
+
+#final graph updating background task
 async def update_graph_task(text: str):
     extractor = ExtractorService()
     graph_service = Neo4jService()
