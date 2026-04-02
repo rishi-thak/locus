@@ -24,6 +24,11 @@ class ExtractorService:
         - ALWAYS use 'cal_poly' as the id for 'cal poly' or 'cal poly slo'
         - use lowercase_snake_case for all other ids
 
+        EXTRACTION RULES:
+        - EVERY entity mentioned in an edge MUST have a corresponding entry in the nodes array.
+        - DO NOT create nodes for numbers, quantities, or abstract concepts (e.g., '50_developers').
+        - Use properties to store extra details like names or counts.
+
         Return ONLY valid JSON. 
 
         Few-shot examples:
