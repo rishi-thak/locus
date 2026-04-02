@@ -65,22 +65,26 @@ class Neo4jService:
 
     #keyword extraction, graphrag in a way
     def getContext(self, queryText):
-        keywords = [word for word in queryText.split() if len(word) > 3]
+        keywords = [word.lower().strip('?.!,') for word in queryText.split() if len(word) > 3]
         if not keywords:
             return ""
         cypher = """
             MATCH (n)
-            WHERE any(prop IN keys(n) WHERE toLower(toString(n[prop])) CONTAINS toLower($k))
-            MATCH (n)-[r]-(neighbor)
-            RETURN n.id + ' ' + type(r) + ' ' + neighbor.id as fact
-            LIMIT 10
+            WHERE any(prop IN keys(n) WHERE toLower(toString(n[prop])) CONTAINS $k)
+            OPTIONAL MATCH (n)-[r]-(neighbor)
+            RETURN n.id as node, type(r) as rel, neighbor.id as target
+            LIMIT 15
         """
 
         facts = []
         with self.driver.session(database=self.database) as session:
             for kw in keywords:
-                result = session.run(cypher,k=kw.lower())
-                facts.extend([record["fact"] for record in result])
+                result = session.run(cypher, k=kw)
+                for record in result:
+                    if record["rel"]:
+                        facts.append(f"{record['node']} {record['rel']} {record['target']}")
+                    else:
+                        facts.append(f"found entity: {record['node']}")
 
         return "\n".join(list(set(facts)))
                     

@@ -1,6 +1,7 @@
 from app.services.ollama import OllamaService
 import json
 import os
+import re
 
 class ExtractorService:
     def __init__(self):
@@ -42,8 +43,12 @@ class ExtractorService:
             {"role": "user", "content": f"Extract from this text: {text}"}
         ]
         response = self.ollama.chat(messages, model=os.getenv("EXTRACTOR_MODEL", "qwen2.5:7b"))
+        content = response['content']
+        print(f"DEBUG: raw extractor output: {content}")
         try:
-            return json.loads(response['content'])
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            json_str = match.group() if match else content
+            return json.loads(json_str)
         except Exception as e:
             print(f"Failed to parse JSON: {e}")
             return {"nodes": [], "edges": []}

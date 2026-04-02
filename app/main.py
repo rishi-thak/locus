@@ -33,11 +33,12 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     graph_service = Neo4jService()
     try:
         context = graph_service.getContext(request.message)
+        print(f"DEBUG: injected context:\n{context}")
         
         system_prompt = "ur locus, a personal knowledge assistant. be concise and helpful."
         if context:
             system_prompt += f"\n\nhere are some facts from the user's graph that might be relevant:\n{context}"
-            print(f"DEBUG: injected context:\n{context}")
+            
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": request.message}
@@ -46,7 +47,7 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         content = response['content']
         
         save_message("assistant", content)
-        background_tasks.add_task(update_graph_task, request.message)
+        background_tasks.add_task(update_graph_task, f"User: {request.message} | Locus: {content}")
         
         return {"response": content}
     except Exception as e:
