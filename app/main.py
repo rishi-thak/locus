@@ -25,6 +25,24 @@ ollama_service = OllamaService()
 class ChatRequest(BaseModel):
     message:str
 
+def needs_extraction(message: str, response: str) -> bool:
+    command_keywords = ["delete", "remove", "forget", "add", "update"]
+    if any(kw in message.lower() for kw in command_keywords):
+        print("DEBUG: needs_extraction: command detected, skipping classification")
+        return True
+    
+    check = ollama_service.chat([
+            {"role": "system", "content": "Reply only with 'yes' or 'no'. Does this conversation mention at least 2 distinct named entities (people, places, or projects)?"},
+            {"role": "user", "content": f"User: {message}\nResponse: {response}"}
+    ])
+    result = "yes" in check['content'].lower()
+    print(f"DEBUG: needs_extraction classification: {result} ({check['content']})")
+    return result
+
+async def maybe_update_graph(message: str, response: str):
+    if needs_extraction(message, response):
+        await update_graph_task(message)
+
 #routes
 @app.post("/chat")
 async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
@@ -57,7 +75,6 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
             GROUNDED MODE: You're provided with verified facts from the user's personal graph.
             - ONLY use the provided facts to answer.
             - Respond informally, like you're talking to a friend.
-            - no intro or filler (don't say "here's what i know" or "locus is connected to").
             - just state the facts naturally.
             - DO NOT use external knowledge about people, companies, or projects.
             - If facts for 'rishi' and 'rishi thakkar' are present, treat them as the same person.
@@ -85,7 +102,7 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
 
             EXAMPLES:
             user: 'who is rishi?'
-            you: 'Hey there! I don't have any information about rishi yet. Could you tell me more?'
+            you: 'I don't have any information about rishi yet. Could you tell me more?'
 
             user: 'I'm working on a new project called vectr'
             you: 'Got it. I'll remember that for you. What does vectr do?'
@@ -99,7 +116,7 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         content = response['content']
         
         save_message("assistant", content)
-        background_tasks.add_task(update_graph_task, request.message)
+        background_tasks.add_task(maybe_update_graph, request.message, content)
         
         return {"response": content}
     except Exception as e:

@@ -17,6 +17,15 @@ class Neo4jService:
 
     def upsertGraph(self,data):
         with self.driver.session(database=self.database) as session:
+
+            for node_id in data.get('deletions', {}).get('nodes', []):
+                session.run("MATCH (n {id: $id}) DETACH DELETE n", id=node_id)
+            for edge in data.get('deletions', {}).get('edges', []):
+                session.run(
+                    "MATCH (a {id: $source})-[r]->(b {id: $target}) DELETE r",
+                    source=edge['source'], target=edge['target']
+                )
+
             #merging nodes
             for node in data.get('nodes', []):
                 session.run("MERGE (n:Entity {id: $id}) SET n.label = $label, n += $properties",
@@ -72,7 +81,7 @@ class Neo4jService:
             MATCH (n)
             WHERE any(prop IN keys(n) WHERE toLower(toString(n[prop])) CONTAINS $k)
             OPTIONAL MATCH (n)-[r]-(neighbor)
-            RETURN n.id as node, type(r) as rel, neighbor.id as target
+            RETURN n.id as node, r.type as rel, neighbor.id as target
             LIMIT 15
         """
 
