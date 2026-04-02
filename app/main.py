@@ -35,9 +35,49 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         context = graph_service.getContext(request.message)
         print(f"DEBUG: injected context:\n{context}")
         
-        system_prompt = "ur locus, a personal knowledge assistant. be concise and helpful."
+        base_prompt = """
+        You're locus, a personal knowledge assistant. Be concise.
+        """
+        # If facts for 'rishi' and 'rishi thakkar' are both present, treat them as the same person.
+
+        # EXAMPLES:
+        # Context: rishi STUDENT_AT cal_poly, rishi LIVES_IN slo
+        # User: who is rishi?
+        # Response: rishi is a student at cal poly and lives in slo.
+
+        # Context: vectr BUILT_BY rishi and scott, vectr HAS_FEATURE rag
+        # User: tell me about vectr
+        # Response: vectr is an intelligence-native workspace built by rishi and scott that features rag.
+        
         if context:
-            system_prompt += f"\n\nhere are some facts from the user's graph that might be relevant:\n{context}"
+            system_prompt = f"""{base_prompt}
+            GROUNDED MODE: You're provided with verified facts from the user's personal graph.
+            - ONLY use the provided facts to answer.
+            - DO NOT use external knowledge about people, companies, or projects.
+            - If facts for 'rishi' and 'rishi thakkar' are present, treat them as the same person.
+
+            EXAMPLES:
+            Context: rishi STUDENT_AT cal_poly, rishi LIVES_IN slo
+            User: who is rishi?
+            Response: rishi is a student at cal poly and lives in slo.
+
+            Context: vectr BUILT_BY rishi and scott, vectr HAS_FEATURE rag
+            User: tell me about vectr
+            Response: vectr is an intelligence-native workspace built by rishi and scott that features rag.
+
+            CURRENT CONTEXT FACTS:
+            {context}
+            """
+
+            print(f"DEBUG: injected context:\n{context}")
+
+        else:
+            system_prompt = f"""{base_prompt}
+            COLD START MODE: Your graph is currently empty for this topic.
+            - DO NOT invent details about the user or their life.
+            - If the user is providing information, acknowledge it neutrally (e.g., "noted" or "got it").
+            - If the user asks a question, explain that u haven't built a knowledge base for that yet and ask them to tell u more.
+            """
             
         messages = [
             {"role": "system", "content": system_prompt},

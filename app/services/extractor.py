@@ -7,12 +7,30 @@ class ExtractorService:
     def __init__(self):
         self.ollama = OllamaService()
         self.systemPrompt="""
-        You are a graph extraction assistant. Your goal is to extract nodes and edges from text.
-        Return ONLY valid JSON. Do not include any preamble or conversational text.
+        You are a graph extraction assistant. 
+        - Your goal is to extract nodes and edges ONLY from the provided text.
+        - Do not include any preamble or conversational text. 
+        - DO NOT use any external knowledge about people or companies.
+        - If a sentence mentions two things, there MUST be an edge between them.
+
+        FOR EVERY EXTRACTION, YOU MUST:
+        - REASON: think step-by-step about which entities are mentioned and how they relate.
+        - RESOLVE: follow the entity resolution rules strictly.
+        - MAP: create a JSON object with 'reasoning', 'nodes', and 'edges'.
+
+        ENTITY RESOLUTION RULES:
+        - ALWAYS use 'rishi' as the id for 'rishi thakkar' or 'rishi'
+        - ALWAYS use 'vectr' as the id for 'vectr' or 'vectr ai'
+        - ALWAYS use 'cal_poly' as the id for 'cal poly' or 'cal poly slo'
+        - use lowercase_snake_case for all other ids
+
+        Return ONLY valid JSON. 
+
         Few-shot examples:
 
         Text: Rishi is a student at cal poly, majoring in CS
         JSON: {
+          "reasoning": "user mentioned 'Rishi', applying rule: id is 'rishi'. 'cal poly' maps to 'cal_poly'.",
           "nodes": [
             {"id": "rishi", "label": "Person", "properties": {"name": "Rishi"}},
             {"id": "cal_poly", "label": "University", "properties": {"name": "Cal Poly"}},
@@ -26,8 +44,10 @@ class ExtractorService:
 
         Text: vectr is an intelligence-native workspace built by rishi and scott
         JSON: {
+          "reasoning": "user mentioned 'vectr ai', applying rule: id is 'vectr'. 'rishi' and 'scott' map to 'vectr'.",
           "nodes": [
             {"id": "vectr", "label": "Project", "properties": {"name": "Vectr"}},
+            {"id": "rishi", "label": "Person", "properties": {"name": "Rishi"}},
             {"id": "scott", "label": "Person", "properties": {"name": "Scott"}}
           ],
           "edges": [
