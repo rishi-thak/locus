@@ -2,9 +2,7 @@ import GraphView from './components/GraphView'
 
 function App() {
   return (
-    
-      <GraphView />
-    
+    <GraphView />
   )
 }
 
