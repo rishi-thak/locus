@@ -6,10 +6,20 @@ from app.services.neo4jService import Neo4jService
 from app.db.sqlite import save_message
 import os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # can be secured later, for future dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 ollama_service = OllamaService()
 
 class ChatRequest(BaseModel):
