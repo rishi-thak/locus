@@ -28,19 +28,46 @@ class ChatRequest(BaseModel):
 #routes
 @app.post("/chat")
 async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
-    #save user message to db
     save_message("user", request.message)
 
-    #get response from chat model
+    graph_service = Neo4jService()
     try:
-        messages = [{"role": "user", "content": request.message}]
+        context = graph_service.getContext(request.message)
+        
+        system_prompt = "ur locus, a personal knowledge assistant. be concise and helpful."
+        if context:
+            system_prompt += f"\n\nhere are some facts from the user's graph that might be relevant:\n{context}"
+            print(f"DEBUG: injected context:\n{context}")
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": request.message}
+        ]
         response = ollama_service.chat(messages)
         content = response['content']
+        
         save_message("assistant", content)
         background_tasks.add_task(update_graph_task, request.message)
-        return {"response":content}
+        
+        return {"response": content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        graph_service.close()
+
+
+    # #save user message to db
+    # save_message("user", request.message)
+
+    # #get response from chat model
+    # try:
+    #     messages = [{"role": "user", "content": request.message}]
+    #     response = ollama_service.chat(messages)
+    #     content = response['content']
+    #     save_message("assistant", content)
+    #     background_tasks.add_task(update_graph_task, request.message)
+    #     return {"response":content}
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/graph")
 async def getGraphEndpoint():

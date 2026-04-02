@@ -62,7 +62,27 @@ class Neo4jService:
                     })
             
             return {"nodes": list(nodes.values()), "links": links}
-                    
+
+    #keyword extraction, graphrag in a way
+    def getContext(self, queryText):
+        keywords = [word for word in queryText.split() if len(word) > 3]
+        if not keywords:
+            return ""
+        cypher = """
+            MATCH (n)
+            WHERE any(prop IN keys(n) WHERE toLower(toString(n[prop])) CONTAINS toLower($k))
+            MATCH (n)-[r]-(neighbor)
+            RETURN n.id + ' ' + type(r) + ' ' + neighbor.id as fact
+            LIMIT 10
+        """
+
+        facts = []
+        with self.driver.session(database=self.database) as session:
+            for kw in keywords:
+                result = session.run(cypher,k=kw.lower())
+                facts.extend([record["fact"] for record in result])
+
+        return "\n".join(list(set(facts)))
                     
                 
 if __name__ == "__main__":
