@@ -36,11 +36,10 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         print(f"DEBUG: injected context:\n{context}")
         
         base_prompt = """
-        You're locus, a personal knowledge assistant. Respond informally, like you're talking to a friend.
-
-        EXAMPLE:
-        user: 'who is rishi?'
-        you: 'hey there! here's what I know about rishi: {context here}'
+        You're locus, a personal knowledge assistant. Talk like a good friend, not a bot.
+        Avoid "assistant" speak (don't say "how can i help" or "here is the info").
+        Keep responses short — 1 to 3 sentences unless the user asks for detail.
+        Never say "here's what I know" or "based on the facts." Just answer.
         """
         # If facts for 'rishi' and 'rishi thakkar' are both present, treat them as the same person.
 
@@ -58,30 +57,30 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
             GROUNDED MODE: You're provided with verified facts from the user's personal graph.
             - ONLY use the provided facts to answer.
             - Respond informally, like you're talking to a friend.
+            - no intro or filler (don't say "here's what i know" or "locus is connected to").
+            - just state the facts naturally.
             - DO NOT use external knowledge about people, companies, or projects.
             - If facts for 'rishi' and 'rishi thakkar' are present, treat them as the same person.
 
             EXAMPLES:
             Context: rishi STUDENT_AT cal_poly, rishi LIVES_IN slo
             User: who is rishi?
-            Response: Here's what I know about rishi: rishi is a student at cal poly and lives in slo.
+            Response: Rishi's a CS student at Cal Poly. Lives in SLO too.
 
             Context: vectr BUILT_BY rishi and scott, vectr HAS_FEATURE rag
             User: tell me about vectr
-            Response: Here are some facts about vectr: vectr is an intelligence-native workspace built by rishi and scott that features rag.
+            Response: Vectr's an intelligence-native workspace — Rishi and Scott built it. Has RAG baked in.
 
             CURRENT CONTEXT FACTS:
             {context}
             """
-
-            print(f"DEBUG: injected context:\n{context}")
 
         else:
             system_prompt = f"""{base_prompt}
             COLD START MODE: Your graph is currently empty for this topic.
             - DO NOT invent details about the user or their life.
             - Respond informally, like you're talking to a friend.
-            - If the user is providing information, acknowledge it neutrally (e.g., "noted" or "got it").
+            - If the user is providing information, acknowledge the information with natural reactions (e.g., "sweet. got it." or "sounds good!").
             - If the user asks a question, explain that u haven't built a knowledge base for that yet and ask them to tell you more.
 
             EXAMPLES:
@@ -96,11 +95,11 @@ async def chatEndpoint(request: ChatRequest, background_tasks: BackgroundTasks):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": request.message}
         ]
-        response = ollama_service.chat(messages)
+        response = ollama_service.chat(messages, options={"temperature": 0.8})
         content = response['content']
         
         save_message("assistant", content)
-        background_tasks.add_task(update_graph_task, f"User: {request.message} | Locus: {content}")
+        background_tasks.add_task(update_graph_task, request.message)
         
         return {"response": content}
     except Exception as e:

@@ -11,9 +11,13 @@ class OllamaService:
         self.extractor_model = os.getenv("EXTRACTOR_MODEL", "qwen2.5:7b")
         self.embed_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
-    def chat(self, messages, model=None):
+    def chat(self, messages, model=None, options=None):
         target_model = model or self.chat_model
-        response = ollama.chat(model=target_model, messages=messages)
+        response = ollama.chat(
+            model=target_model,
+            messages=messages,
+            options=options
+            )
         return response['message']
 
     # def extractEntities(self,text):
